@@ -11,6 +11,13 @@ const path = require('path')
 const axios = require('axios')
 const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
+const ytdlp = require('yt-dlp-exec')
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg')
+const ffprobe = require('ffprobe-static')
+
+ffmpeg.setFfmpegPath(ffmpegInstaller.path)
+ffmpeg.setFfprobePath(ffprobe.path)
+
 
 // ===== FFMPEG PORTABLE (WINDOWS + LINUX) =====
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg')
@@ -261,50 +268,55 @@ async function startBot() {
     }
 
     // ===== PLAY MP3 =====
-    if (text.startsWith('!play ')) {
-      const query = text.replace('!play ', '').trim()
-      if (!query) return
+    // ===== PLAY MP3 =====
+if (text.startsWith('!play ')) {
+  const query = text.replace('!play ', '').trim()
+  if (!query) return
 
-      const output = path.join(tempDir, `${Date.now()}.mp3`)
-      const ytdlpPath = path.join(__dirname, 'bin', 'yt-dlp.exe')
-      const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg buat yt-dlp
+  const output = path.join(tempDir, `${Date.now()}.mp3`)
 
-      await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
+  await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
 
-      const cmd = `"${ytdlpPath}" --ffmpeg-location "${ffmpegDir}" -x --audio-format mp3 -o "${output}" "ytsearch1:${query}"`
+  try {
+    // jalankan yt-dlp via package (portable)
+    await ytdlp(`ytsearch1:${query}`, {
+      output,
+      extractAudio: true,
+      audioFormat: 'mp3',
+      ffmpegLocation: path.dirname(ffmpegInstaller.path) // folder ffmpeg
+    })
 
-      exec(cmd, async (err) => {
-        if (err) {
-          console.error(err)
-          return sock.sendMessage(jid, {
-            text: '❌ Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!'
-          })
-        }
-
-        if (!fs.existsSync(output)) {
-          console.error('File output tidak ditemukan:', output)
-          return sock.sendMessage(jid, {
-            text: '❌ File audio tidak ditemukan setelah proses download.'
-          })
-        }
-
-        const audioBuf = fs.readFileSync(output)
-        if (!audioBuf || !audioBuf.length) {
-          console.error('Buffer audio kosong')
-          fs.unlinkSync(output)
-          return sock.sendMessage(jid, {
-            text: '❌ Gagal membaca file audio.'
-          })
-        }
-
-        await sock.sendMessage(jid, {
-          audio: audioBuf,
-          mimetype: 'audio/mpeg'
-        })
-
-        fs.unlinkSync(output)
+    if (!fs.existsSync(output)) {
+      console.error('File output tidak ditemukan:', output)
+      return sock.sendMessage(jid, {
+        text: '❌ File audio tidak ditemukan setelah proses download.'
       })
     }
+
+    const audioBuf = fs.readFileSync(output)
+    if (!audioBuf || !audioBuf.length) {
+      console.error('Buffer audio kosong')
+      fs.unlinkSync(output)
+      return sock.sendMessage(jid, {
+        text: '❌ Gagal membaca file audio.'
+      })
+    }
+
+    await sock.sendMessage(jid, {
+      audio: audioBuf,
+      mimetype: 'audio/mpeg'
+    })
+
+    fs.unlinkSync(output)
+  } catch (err) {
+    console.error(err)
+    if (fs.existsSync(output)) fs.unlinkSync(output)
+    await sock.sendMessage(jid, {
+      text: '❌ Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!'
+    })
+  }
+}
+
   })
 }
 
