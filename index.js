@@ -208,7 +208,7 @@ async function startBot() {
       return
     }
 
-    // ===== COMMAND: TEXT TO STICKER (via API) =====
+    // ===== COMMAND: TEXT TO STICKER (via API dummy) =====
     if (text.startsWith('!tstick')) {
       const content = text.replace('!tstick', '').trim()
       if (!content) {
