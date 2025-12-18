@@ -11,7 +11,10 @@ const path = require('path')
 const axios = require('axios')
 const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
-// const { createCanvas, registerFont } = require('canvas')
+
+// ===== CONFIG OWNER =====
+const OWNER_NAME = 'GuptaAI Dev'
+const OWNER_IG = 'https://www.instagram.com/gedevln12_'
 
 // ===== FFMPEG PATH =====
 ffmpeg.setFfmpegPath(
@@ -22,9 +25,7 @@ ffmpeg.setFfmpegPath(
 const tempDir = path.join(__dirname, 'temp')
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir)
 
-// (opsional) register font kalau mau pakai font khusus
-// registerFont(path.join(__dirname, 'fonts', 'YourFont.ttf'), { family: 'CustomFont' })
-
+// ================== START BOT ==================
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('./session')
 
@@ -111,96 +112,7 @@ async function startBot() {
     })
   }
 
-  // ===== FUNGSI HELPER: TEXT TO STICKER (PNG) =====
-const createTextStickerBuffer = (text) => {
-  const canvasSize = 512
-  const canvas = createCanvas(canvasSize, canvasSize)
-  const ctx = canvas.getContext('2d')
-
-  // background putih
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, canvasSize, canvasSize)
-
-  ctx.fillStyle = '#000000'
-  ctx.textBaseline = 'middle'
-
-  const paddingX = 40
-  const maxWidth = canvasSize - paddingX * 2
-  let fontSize = 120
-
-  const wrapWordsToLines = (words, size) => {
-    ctx.font = `${size}px sans-serif`
-    const lines = []
-    let current = []
-
-    for (const w of words) {
-      const test = [...current, w]
-      const left = test[0]
-      const right = test.slice(1).join(' ')
-      let width
-      if (!right) {
-        width = ctx.measureText(left).width
-      } else {
-        const leftW = ctx.measureText(left).width
-        const rightW = ctx.measureText(right).width
-        width = leftW + rightW + 40 // jarak kira-kira
-      }
-      if (width > maxWidth && current.length) {
-        lines.push(current)
-        current = [w]
-      } else {
-        current = test
-      }
-    }
-    if (current.length) lines.push(current)
-    return lines
-  }
-
-  const wordsAll = text.split(/\s+/).filter(Boolean)
-  let linesWords = []
-
-  while (fontSize > 24) {
-    linesWords = wrapWordsToLines(wordsAll, fontSize)
-    if (linesWords.length <= 2) break
-    fontSize -= 4
-  }
-
-  ctx.font = `${fontSize}px sans-serif`
-
-  if (linesWords.length > 2) {
-    const flat = linesWords.flat()
-    linesWords = [
-      flat.slice(0, Math.ceil(flat.length / 2)),
-      flat.slice(Math.ceil(flat.length / 2))
-    ]
-  }
-
-  const lineHeight = fontSize + 6
-  const totalHeight = linesWords.length * lineHeight
-  const startY = canvasSize / 2 - totalHeight / 2 + lineHeight / 2
-
-  linesWords.forEach((words, i) => {
-    const y = startY + i * lineHeight
-
-    if (words.length === 1) {
-      ctx.textAlign = 'left'
-      ctx.fillText(words[0], paddingX, y)
-    } else {
-      const left = words[0]
-      const right = words.slice(1).join(' ')
-
-      ctx.textAlign = 'left'
-      ctx.fillText(left, paddingX, y)
-
-      ctx.textAlign = 'right'
-      ctx.fillText(right, canvasSize - paddingX, y)
-    }
-  })
-
-  return canvas.toBuffer('image/png')
-}
-
-  // ===== MESSAGE =====
+  // ================== MESSAGE HANDLER ==================
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0]
     if (!msg.message) return
@@ -209,58 +121,117 @@ const createTextStickerBuffer = (text) => {
     const text = getText(msg).trim()
 
     // ===== HANDLER REPLY BUTTON =====
-    if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
-      const btnId =
-        msg.message.templateButtonReplyMessage?.selectedId ||
-        msg.message.buttonsResponseMessage?.selectedButtonId
+  // ===== HANDLER REPLY BUTTON =====
+if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
+  const btnId =
+    msg.message.templateButtonReplyMessage?.selectedId ||
+    msg.message.buttonsResponseMessage?.selectedButtonId
 
-      if (btnId === 'test_btn') {
-        return sock.sendMessage(jid, {
-          text: '✅ Bot aktif dan siap membantu kamu.'
-        })
-      }
+  if (btnId === 'test_btn') {
+    return sock.sendMessage(jid, {
+      text: '✅ Bot aktif dan siap bantu kamu 24/7.'
+    })
+  }
 
-      if (btnId === 'sticker_btn') {
-        return sock.sendMessage(jid, {
-          text: '🧩 Kirim foto / video (maks 10 detik) lalu ketik *!sticker* atau reply dengan *!sticker* untuk ubah jadi sticker.'
-        })
-      }
+  if (btnId === 'sticker_btn') {
+    return sock.sendMessage(jid, {
+      text: '🧩 Kirim foto / video (maks 10 detik), lalu ketik *!sticker* atau reply dengan *!sticker* untuk diubah jadi sticker.'
+    })
+  }
 
-      if (btnId === 'play_btn') {
-        return sock.sendMessage(jid, {
-          text: '🎵 Ketik: *!play <judul lagu>*\nContoh: !play sampai jadi debu'
-        })
+  if (btnId === 'play_btn') {
+    return sock.sendMessage(jid, {
+      text: '🎵 Format: *!play <judul lagu>*\nContoh: !play sampai jadi debu'
+    })
+  }
+
+  if (btnId === 'owner_btn') {
+    return sock.sendMessage(jid, {
+      text:
+        `👤 Owner GuptaAI Bot\n\n` +
+        `• Nama : ${OWNER_NAME}\n` +
+        `• Instagram : ${OWNER_IG}\n\n` +
+        `Silakan hubungi via DM Instagram untuk kerja sama, bug report, atau request fitur baru.`
+    })
+  }
+}
+
+
+    // ===== MENU DENGAN TOMBOL (LEBIH KEREN) =====
+  // ===== MENU DENGAN INTERACTIVE MESSAGE (v7) =====
+if (text === '!menu') {
+  return sock.sendMessage(jid, {
+    interactiveMessage: {
+      body: {
+        text:
+`╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
+│
+│  Hi, selamat datang di *GuptaAI Bot*!
+│  Bot ini siap bantu kamu 24/7. 
+│
+│  FITUR UTAMA
+│  • !sticker      → Ubah foto/video jadi sticker
+│  • !tstick <teks> → Sticker teks aesthetic
+│  • !play <judul> → Download & kirim musik
+│
+│  CONTOH PENGGUNAAN
+│  • Kirim foto lalu ketik:  *!sticker*
+│  • *!tstick apa ya kak ya*
+│  • *!play sampai jadi debu*
+│
+│  OWNER & SOCIAL
+│  • Instagram: @gedevln12_
+│    ${OWNER_IG}
+│
+│  Gunakan tombol cepat di bawah
+│  untuk akses fitur dengan sekali klik.
+╰────────────────────────────────╯`
+      },
+      footer: {
+        text: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_'
+      },
+      header: {
+        title: 'GuptaAI WhatsApp Bot',
+        hasMediaAttachment: false
+      },
+      nativeFlowMessage: {
+        buttons: [
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🔁 Tes Bot',
+              id: 'test_btn'
+            })
+          },
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🧩 Buat Sticker',
+              id: 'sticker_btn'
+            })
+          },
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🎵 Play Musik',
+              id: 'play_btn'
+            })
+          },
+          {
+            name: 'cta_url',
+            buttonParamsJson: JSON.stringify({
+              display_text: '👤 Owner / Instagram',
+              url: OWNER_IG,
+              merchant_url: OWNER_IG
+            })
+          }
+        ],
+        messageParamsJson: JSON.stringify({})
       }
     }
+  })
+}
 
-    // ===== MENU DENGAN TOMBOL =====
-    if (text === '!menu') {
-      const buttons = [
-        { buttonId: 'test_btn', buttonText: { displayText: '🔁 Tes Bot' } },
-        { buttonId: 'sticker_btn', buttonText: { displayText: '🧩 Buat Sticker' } },
-        { buttonId: 'play_btn', buttonText: { displayText: '🎵 Play Musik' } }
-      ]
-
-      return sock.sendMessage(jid, {
-        text: `╭━━━〔 🤖 Gupta WhatsApp Bot 〕━━━╮
-┃
-┃ 𝗙𝗜𝗧𝗨𝗥 𝗨𝗧𝗔𝗠𝗔
-┃ • !sticker  → Ubah foto/video jadi sticker
-┃ • !tstick <teks> → Sticker teks
-┃ • !play <judul>
-┃
-┃ 𝗖𝗢𝗡𝗧𝗢𝗛
-┃ • !sticker (kirim foto lalu ketik !sticker)
-┃ • !tstick apa ya kak ya
-┃ • !play sampai jadi debu
-┃
-┃ Ketik perintah di atas
-╰━━━━━━━━━━━━━━━━━━━━╯`,
-        footer: 'GuptaAI • Smart WhatsApp Assistant',
-        buttons,
-        headerType: 1
-      })
-    }
 
     // ===== COMMAND: !sticker (image/video / reply image/video) =====
     if (text === '!sticker') {
@@ -300,24 +271,30 @@ const createTextStickerBuffer = (text) => {
       return
     }
 
-    // ===== COMMAND: TEXT TO STICKER =====
-  if (text.startsWith('!tstick')) {
-  const content = text.replace('!tstick', '').trim()
-  if (!content) return sock.sendMessage(jid, { text: '❌ Contoh: *!tstick apa ya kak ya*' })
+    // ===== COMMAND: TEXT TO STICKER (via API) =====
+    if (text.startsWith('!tstick')) {
+      const content = text.replace('!tstick', '').trim()
+      if (!content) {
+        return sock.sendMessage(jid, {
+          text: '❌ Contoh: *!tstick apa ya kak ya*'
+        })
+      }
 
-  try {
-    // misal API kamu mengembalikan buffer image
-    const { data } = await axios.get(`https://api-kamu/t2s?text=${encodeURIComponent(content)}`, {
-      responseType: 'arraybuffer'
-    })
-    const buf = Buffer.from(data)
-    await sock.sendMessage(jid, { sticker: buf })
-  } catch (e) {
-    console.error(e)
-    await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks.' })
-  }
-}
+      try {
+        const { data } = await axios.get(
+          `https://be-botwa-production.up.railway.app/t2s?text=${encodeURIComponent(content)}`,
+          { responseType: 'arraybuffer' }
+        )
 
+        const buf = Buffer.from(data)
+        await sock.sendMessage(jid, { sticker: buf })
+      } catch (e) {
+        console.error(e)
+        await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks.' })
+      }
+
+      return
+    }
 
     // ===== PLAY MP3 =====
     if (text.startsWith('!play ')) {
