@@ -33,12 +33,12 @@ const ytdlpPath = isWindows
   : path.join(__dirname, 'bin', 'yt-dlp')     // Railway (Linux)
 
 const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg untuk yt-dlp
-// 
+
 console.log('Platform:', process.platform)
 console.log('YT-DLP PATH:', ytdlpPath)
 
 // ================== START BOT ==================
-async function startBot() {
+async function startBot () {
   const { state, saveCreds } = await useMultiFileAuthState('./session')
 
   const sock = makeWASocket({
@@ -278,7 +278,8 @@ async function startBot() {
 
       await sock.sendMessage(jid, { text: '<?> Mencari & mendownload lagu, tunggu sebentar...' })
 
-      const cmd = `"${ytdlpPath}" --ffmpeg-location "${ffmpegDir}" -x --audio-format mp3 -o "${output}" "ytsearch1:${query}"`
+      // tambahkan -f bestaudio untuk mengurangi masalah format SABR
+      const cmd = `"${ytdlpPath}" --ffmpeg-location "${ffmpegDir}" -f bestaudio -x --audio-format mp3 -o "${output}" "ytsearch1:${query}"`
 
       exec(cmd, async (err) => {
         if (err) {
