@@ -157,12 +157,9 @@ async function startBot() {
       }
     }
 
-    // ===== MENU DENGAN INTERACTIVE MESSAGE (v7) =====
+    // ===== MENU DENGAN TOMBOL KLASIK (FIX) =====
     if (text === '!menu') {
-      return sock.sendMessage(jid, {
-        interactiveMessage: {
-          body: {
-            text:
+      const menuText =
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
 │
 │  Hi, selamat datang di *GuptaAI Bot*!
@@ -175,7 +172,7 @@ async function startBot() {
 │
 │  CONTOH PENGGUNAAN
 │  • Kirim foto lalu ketik:  *!sticker*
-│  • *!tstick apa ya kak ya*
+│  • *tstick apa ya kak ya*
 │  • *!play sampai jadi debu*
 │
 │  OWNER & SOCIAL
@@ -185,49 +182,17 @@ async function startBot() {
 │  Gunakan tombol cepat di bawah
 │  untuk akses fitur dengan sekali klik.
 ╰────────────────────────────────╯`
-          },
-          footer: {
-            text: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_'
-          },
-          header: {
-            title: 'GuptaAI WhatsApp Bot',
-            hasMediaAttachment: false
-          },
-          nativeFlowMessage: {
-            buttons: [
-              {
-                name: 'quick_reply',
-                buttonParamsJson: JSON.stringify({
-                  display_text: '🔁 Tes Bot',
-                  id: 'test_btn'
-                })
-              },
-              {
-                name: 'quick_reply',
-                buttonParamsJson: JSON.stringify({
-                  display_text: '🧩 Buat Sticker',
-                  id: 'sticker_btn'
-                })
-              },
-              {
-                name: 'quick_reply',
-                buttonParamsJson: JSON.stringify({
-                  display_text: '🎵 Play Musik',
-                  id: 'play_btn'
-                })
-              },
-              {
-                name: 'cta_url',
-                buttonParamsJson: JSON.stringify({
-                  display_text: '👤 Owner / Instagram',
-                  url: OWNER_IG,
-                  merchant_url: OWNER_IG
-                })
-              }
-            ],
-            messageParamsJson: JSON.stringify({})
-          }
-        }
+
+      return sock.sendMessage(jid, {
+        text: menuText,
+        footer: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_',
+        buttons: [
+          { buttonId: 'test_btn', buttonText: { displayText: '🔁 Tes Bot' }, type: 1 },
+          { buttonId: 'sticker_btn', buttonText: { displayText: '🧩 Buat Sticker' }, type: 1 },
+          { buttonId: 'play_btn', buttonText: { displayText: '🎵 Play Musik' }, type: 1 },
+          { buttonId: 'owner_btn', buttonText: { displayText: '👤 Owner / Instagram' }, type: 1 }
+        ],
+        headerType: 1
       })
     }
 
@@ -301,7 +266,6 @@ async function startBot() {
 
       const output = path.join(tempDir, `${Date.now()}.mp3`)
       const ytdlpPath = path.join(__dirname, 'bin', 'yt-dlp.exe')
-
       const ffmpegDir = ffmpegBinDir
 
       await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
@@ -316,8 +280,24 @@ async function startBot() {
           })
         }
 
+        if (!fs.existsSync(output)) {
+          console.error('File output tidak ditemukan:', output)
+          return sock.sendMessage(jid, {
+            text: '❌ File audio tidak ditemukan setelah proses download.'
+          })
+        }
+
+        const audioBuf = fs.readFileSync(output)
+        if (!audioBuf || !audioBuf.length) {
+          console.error('Buffer audio kosong')
+          fs.unlinkSync(output)
+          return sock.sendMessage(jid, {
+            text: '❌ Gagal membaca file audio.'
+          })
+        }
+
         await sock.sendMessage(jid, {
-          audio: fs.readFileSync(output),
+          audio: audioBuf,
           mimetype: 'audio/mpeg'
         })
 
