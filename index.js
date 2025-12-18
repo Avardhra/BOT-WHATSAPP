@@ -121,48 +121,43 @@ async function startBot() {
     const text = getText(msg).trim()
 
     // ===== HANDLER REPLY BUTTON =====
-  // ===== HANDLER REPLY BUTTON =====
-if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
-  const btnId =
-    msg.message.templateButtonReplyMessage?.selectedId ||
-    msg.message.buttonsResponseMessage?.selectedButtonId
+    if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
+      const btnId =
+        msg.message.templateButtonReplyMessage?.selectedId ||
+        msg.message.buttonsResponseMessage?.selectedButtonId
 
-  if (btnId === 'test_btn') {
-    return sock.sendMessage(jid, {
-      text: '✅ Bot aktif dan siap bantu kamu 24/7.'
-    })
-  }
+      if (btnId === 'test_btn') {
+        return sock.sendMessage(jid, {
+          text: '✅ Bot aktif dan siap bantu kamu 24/7.'
+        })
+      }
 
-  if (btnId === 'sticker_btn') {
-    return sock.sendMessage(jid, {
-      text: '🧩 Kirim foto / video (maks 10 detik), lalu ketik *!sticker* atau reply dengan *!sticker* untuk diubah jadi sticker.'
-    })
-  }
+      if (btnId === 'sticker_btn') {
+        return sock.sendMessage(jid, {
+          text: '🧩 Kirim foto / video (maks 10 detik), lalu ketik *!sticker* atau reply dengan *!sticker* untuk diubah jadi sticker.'
+        })
+      }
 
-  if (btnId === 'play_btn') {
-    return sock.sendMessage(jid, {
-      text: '🎵 Format: *!play <judul lagu>*\nContoh: !play sampai jadi debu'
-    })
-  }
+      if (btnId === 'play_btn') {
+        return sock.sendMessage(jid, {
+          text: '🎵 Format: *!play <judul lagu>*\nContoh: !play sampai jadi debu'
+        })
+      }
 
-  if (btnId === 'owner_btn') {
-    return sock.sendMessage(jid, {
-      text:
-        `👤 Owner GuptaAI Bot\n\n` +
-        `• Nama : ${OWNER_NAME}\n` +
-        `• Instagram : ${OWNER_IG}\n\n` +
-        `Silakan hubungi via DM Instagram untuk kerja sama, bug report, atau request fitur baru.`
-    })
-  }
-}
+      if (btnId === 'owner_btn') {
+        return sock.sendMessage(jid, {
+          text:
+            `👤 Owner GuptaAI Bot\n\n` +
+            `• Nama : ${OWNER_NAME}\n` +
+            `• Instagram : ${OWNER_IG}\n\n` +
+            `Silakan hubungi via DM Instagram untuk kerja sama, bug report, atau request fitur baru.`
+        })
+      }
+    }
 
-
-    // ===== MENU DENGAN TOMBOL (LEBIH KEREN) =====
-  // ===== MENU DENGAN INTERACTIVE MESSAGE (v7) =====
-if (text === '!menu') {
-  return sock.sendMessage(jid, {
-    interactiveMessage: {
-      body: {
+    // ===== MENU DENGAN TOMBOL =====
+    if (text === '!menu') {
+      return sock.sendMessage(jid, {
         text:
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
 │
@@ -170,9 +165,9 @@ if (text === '!menu') {
 │  Bot ini siap bantu kamu 24/7. 
 │
 │  FITUR UTAMA
-│  • !sticker      → Ubah foto/video jadi sticker
+│  • !sticker       → Ubah foto/video jadi sticker
 │  • !tstick <teks> → Sticker teks aesthetic
-│  • !play <judul> → Download & kirim musik
+│  • !play <judul>  → Download & kirim musik
 │
 │  CONTOH PENGGUNAAN
 │  • Kirim foto lalu ketik:  *!sticker*
@@ -185,16 +180,8 @@ if (text === '!menu') {
 │
 │  Gunakan tombol cepat di bawah
 │  untuk akses fitur dengan sekali klik.
-╰────────────────────────────────╯`
-      },
-      footer: {
-        text: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_'
-      },
-      header: {
-        title: 'GuptaAI WhatsApp Bot',
-        hasMediaAttachment: false
-      },
-      nativeFlowMessage: {
+╰────────────────────────────────╯`,
+        footer: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_',
         buttons: [
           {
             name: 'quick_reply',
@@ -225,13 +212,9 @@ if (text === '!menu') {
               merchant_url: OWNER_IG
             })
           }
-        ],
-        messageParamsJson: JSON.stringify({})
-      }
+        ]
+      })
     }
-  })
-}
-
 
     // ===== COMMAND: !sticker (image/video / reply image/video) =====
     if (text === '!sticker') {
