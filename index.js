@@ -16,9 +16,11 @@ const ffmpeg = require('fluent-ffmpeg')
 const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
 
-// ===== FFMPEG PATH =====
+// ===== FFMPEG PATH (PAKAI FOLDER PROJECT) =====
+const ffmpegBinDir = path.join(__dirname, 'ffmpeg-8.0.1-essentials_build', 'bin')
+
 ffmpeg.setFfmpegPath(
-  path.normalize('./ffmpeg-8.0.1-essentials_build/bin/ffmpeg.exe')
+  path.join(ffmpegBinDir, 'ffmpeg.exe')
 )
 
 // ===== TEMP FOLDER =====
@@ -155,10 +157,12 @@ async function startBot() {
       }
     }
 
-    // ===== MENU DENGAN TOMBOL =====
+    // ===== MENU DENGAN INTERACTIVE MESSAGE (v7) =====
     if (text === '!menu') {
       return sock.sendMessage(jid, {
-        text:
+        interactiveMessage: {
+          body: {
+            text:
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
 │
 │  Hi, selamat datang di *GuptaAI Bot*!
@@ -180,39 +184,50 @@ async function startBot() {
 │
 │  Gunakan tombol cepat di bawah
 │  untuk akses fitur dengan sekali klik.
-╰────────────────────────────────╯`,
-        footer: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_',
-        buttons: [
-          {
-            name: 'quick_reply',
-            buttonParamsJson: JSON.stringify({
-              display_text: '🔁 Tes Bot',
-              id: 'test_btn'
-            })
+╰────────────────────────────────╯`
           },
-          {
-            name: 'quick_reply',
-            buttonParamsJson: JSON.stringify({
-              display_text: '🧩 Buat Sticker',
-              id: 'sticker_btn'
-            })
+          footer: {
+            text: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_'
           },
-          {
-            name: 'quick_reply',
-            buttonParamsJson: JSON.stringify({
-              display_text: '🎵 Play Musik',
-              id: 'play_btn'
-            })
+          header: {
+            title: 'GuptaAI WhatsApp Bot',
+            hasMediaAttachment: false
           },
-          {
-            name: 'cta_url',
-            buttonParamsJson: JSON.stringify({
-              display_text: '👤 Owner / Instagram',
-              url: OWNER_IG,
-              merchant_url: OWNER_IG
-            })
+          nativeFlowMessage: {
+            buttons: [
+              {
+                name: 'quick_reply',
+                buttonParamsJson: JSON.stringify({
+                  display_text: '🔁 Tes Bot',
+                  id: 'test_btn'
+                })
+              },
+              {
+                name: 'quick_reply',
+                buttonParamsJson: JSON.stringify({
+                  display_text: '🧩 Buat Sticker',
+                  id: 'sticker_btn'
+                })
+              },
+              {
+                name: 'quick_reply',
+                buttonParamsJson: JSON.stringify({
+                  display_text: '🎵 Play Musik',
+                  id: 'play_btn'
+                })
+              },
+              {
+                name: 'cta_url',
+                buttonParamsJson: JSON.stringify({
+                  display_text: '👤 Owner / Instagram',
+                  url: OWNER_IG,
+                  merchant_url: OWNER_IG
+                })
+              }
+            ],
+            messageParamsJson: JSON.stringify({})
           }
-        ]
+        }
       })
     }
 
@@ -286,7 +301,9 @@ async function startBot() {
 
       const output = path.join(tempDir, `${Date.now()}.mp3`)
       const ytdlpPath = path.join(__dirname, 'bin', 'yt-dlp.exe')
-      const ffmpegDir = 'C:/Users/ASUS/Downloads/ffmpeg-8.0.1-essentials_build/ffmpeg-8.0.1-essentials_build/bin'
+
+      // pakai folder ffmpeg yang sama
+      const ffmpegDir = ffmpegBinDir
 
       await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
 
