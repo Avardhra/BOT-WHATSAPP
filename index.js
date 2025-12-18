@@ -11,19 +11,10 @@ const path = require('path')
 const axios = require('axios')
 const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
-const ytdlp = require('yt-dlp-exec')
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg')
 const ffprobe = require('ffprobe-static')
-
-ffmpeg.setFfmpegPath(ffmpegInstaller.path)
-ffmpeg.setFfprobePath(ffprobe.path)
-
 
 // ===== FFMPEG PORTABLE (WINDOWS + LINUX) =====
-const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg')
-const ffprobe = require('ffprobe-static')
-
-// fluent-ffmpeg pakai binary dari paket npm (otomatis pilih sesuai OS)
 ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 ffmpeg.setFfprobePath(ffprobe.path)
 
@@ -34,6 +25,14 @@ const OWNER_IG = 'https://www.instagram.com/gedevln12_'
 // ===== TEMP FOLDER =====
 const tempDir = path.join(__dirname, 'temp')
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir)
+
+// ===== DETEKSI OS & PATH YT-DLP =====
+const isWindows = process.platform === 'win32'
+const ytdlpPath = isWindows
+  ? path.join(__dirname, 'bin', 'yt-dlp.exe') // lokal Windows
+  : path.join(__dirname, 'bin', 'yt-dlp')      // Railway (Linux)
+
+const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg untuk yt-dlp
 
 // ================== START BOT ==================
 async function startBot() {
@@ -189,7 +188,7 @@ async function startBot() {
 │
 │  Gunakan tombol cepat di bawah
 │  untuk akses fitur dengan sekali klik.
-╰────────────────────────────────╯`
+╰─────────────────────╯`
 
       return sock.sendMessage(jid, {
         text: menuText,
@@ -268,55 +267,48 @@ async function startBot() {
     }
 
     // ===== PLAY MP3 =====
-    // ===== PLAY MP3 =====
-if (text.startsWith('!play ')) {
-  const query = text.replace('!play ', '').trim()
-  if (!query) return
+    if (text.startsWith('!play ')) {
+      const query = text.replace('!play ', '').trim()
+      if (!query) return
 
-  const output = path.join(tempDir, `${Date.now()}.mp3`)
+      const output = path.join(tempDir, `${Date.now()}.mp3`)
 
-  await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
+      await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
 
-  try {
-    // jalankan yt-dlp via package (portable)
-    await ytdlp(`ytsearch1:${query}`, {
-      output,
-      extractAudio: true,
-      audioFormat: 'mp3',
-      ffmpegLocation: path.dirname(ffmpegInstaller.path) // folder ffmpeg
-    })
+      const cmd = `"${ytdlpPath}" --ffmpeg-location "${ffmpegDir}" -x --audio-format mp3 -o "${output}" "ytsearch1:${query}"`
 
-    if (!fs.existsSync(output)) {
-      console.error('File output tidak ditemukan:', output)
-      return sock.sendMessage(jid, {
-        text: '❌ File audio tidak ditemukan setelah proses download.'
+      exec(cmd, async (err) => {
+        if (err) {
+          console.error(err)
+          return sock.sendMessage(jid, {
+            text: '❌ Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!'
+          })
+        }
+
+        if (!fs.existsSync(output)) {
+          console.error('File output tidak ditemukan:', output)
+          return sock.sendMessage(jid, {
+            text: '❌ File audio tidak ditemukan setelah proses download.'
+          })
+        }
+
+        const audioBuf = fs.readFileSync(output)
+        if (!audioBuf || !audioBuf.length) {
+          console.error('Buffer audio kosong')
+          fs.unlinkSync(output)
+          return sock.sendMessage(jid, {
+            text: '❌ Gagal membaca file audio.'
+          })
+        }
+
+        await sock.sendMessage(jid, {
+          audio: audioBuf,
+          mimetype: 'audio/mpeg'
+        })
+
+        fs.unlinkSync(output)
       })
     }
-
-    const audioBuf = fs.readFileSync(output)
-    if (!audioBuf || !audioBuf.length) {
-      console.error('Buffer audio kosong')
-      fs.unlinkSync(output)
-      return sock.sendMessage(jid, {
-        text: '❌ Gagal membaca file audio.'
-      })
-    }
-
-    await sock.sendMessage(jid, {
-      audio: audioBuf,
-      mimetype: 'audio/mpeg'
-    })
-
-    fs.unlinkSync(output)
-  } catch (err) {
-    console.error(err)
-    if (fs.existsSync(output)) fs.unlinkSync(output)
-    await sock.sendMessage(jid, {
-      text: '❌ Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!'
-    })
-  }
-}
-
   })
 }
 
