@@ -30,7 +30,7 @@ if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir)
 const isWindows = process.platform === 'win32'
 const ytdlpPath = isWindows
   ? path.join(__dirname, 'bin', 'yt-dlp.exe') // lokal Windows
-  : path.join(__dirname, 'bin', 'yt-dlp')      // Railway (Linux)
+  : path.join(__dirname, 'bin', 'yt-dlp')     // Railway (Linux)
 
 const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg untuk yt-dlp
 
@@ -203,7 +203,7 @@ async function startBot() {
       })
     }
 
-    // ===== COMMAND: !sticker (image/video / reply image/video) =====
+    // ===== COMMAND: !sticker =====
     if (text === '!sticker') {
       const mediaData = await getMediaFromMessage(msg)
       if (!mediaData) {
