@@ -121,78 +121,117 @@ async function startBot() {
     const text = getText(msg).trim()
 
     // ===== HANDLER REPLY BUTTON =====
-    if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
-      const btnId =
-        msg.message.templateButtonReplyMessage?.selectedId ||
-        msg.message.buttonsResponseMessage?.selectedButtonId
+  // ===== HANDLER REPLY BUTTON =====
+if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
+  const btnId =
+    msg.message.templateButtonReplyMessage?.selectedId ||
+    msg.message.buttonsResponseMessage?.selectedButtonId
 
-      if (btnId === 'test_btn') {
-        return sock.sendMessage(jid, {
-          text: '✅ Bot aktif dan siap bantu kamu 24/7.'
-        })
-      }
+  if (btnId === 'test_btn') {
+    return sock.sendMessage(jid, {
+      text: '✅ Bot aktif dan siap bantu kamu 24/7.'
+    })
+  }
 
-      if (btnId === 'sticker_btn') {
-        return sock.sendMessage(jid, {
-          text: '🧩 Kirim foto / video (maks 10 detik), lalu ketik *!sticker* atau reply dengan *!sticker* untuk diubah jadi sticker.'
-        })
-      }
+  if (btnId === 'sticker_btn') {
+    return sock.sendMessage(jid, {
+      text: '🧩 Kirim foto / video (maks 10 detik), lalu ketik *!sticker* atau reply dengan *!sticker* untuk diubah jadi sticker.'
+    })
+  }
 
-      if (btnId === 'play_btn') {
-        return sock.sendMessage(jid, {
-          text: '🎵 Format: *!play <judul lagu>*\nContoh: !play sampai jadi debu'
-        })
-      }
+  if (btnId === 'play_btn') {
+    return sock.sendMessage(jid, {
+      text: '🎵 Format: *!play <judul lagu>*\nContoh: !play sampai jadi debu'
+    })
+  }
 
-      if (btnId === 'owner_btn') {
-        return sock.sendMessage(jid, {
-          text:
-            `👤 Owner GuptaAI Bot\n\n` +
-            `• Nama : ${OWNER_NAME}\n` +
-            `• Instagram : ${OWNER_IG}\n\n` +
-            `Silakan hubungi via DM Instagram untuk kerja sama, bug report, atau request fitur baru.`
-        })
-      }
-    }
+  if (btnId === 'owner_btn') {
+    return sock.sendMessage(jid, {
+      text:
+        `👤 Owner GuptaAI Bot\n\n` +
+        `• Nama : ${OWNER_NAME}\n` +
+        `• Instagram : ${OWNER_IG}\n\n` +
+        `Silakan hubungi via DM Instagram untuk kerja sama, bug report, atau request fitur baru.`
+    })
+  }
+}
+
 
     // ===== MENU DENGAN TOMBOL (LEBIH KEREN) =====
-    if (text === '!menu') {
-      const buttons = [
-        { buttonId: 'test_btn', buttonText: { displayText: '🔁 Tes Bot' }, type: 1 },
-        { buttonId: 'sticker_btn', buttonText: { displayText: '🧩 Buat Sticker' }, type: 1 },
-        { buttonId: 'play_btn', buttonText: { displayText: '🎵 Play Musik' }, type: 1 },
-        { buttonId: 'owner_btn', buttonText: { displayText: '👤 Owner / Instagram' }, type: 1 }
-      ]
-
-      return sock.sendMessage(jid, {
+  // ===== MENU DENGAN INTERACTIVE MESSAGE (v7) =====
+if (text === '!menu') {
+  return sock.sendMessage(jid, {
+    interactiveMessage: {
+      body: {
         text:
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
 │
-│  𝗛𝗶, selamat datang di *GuptaAI Bot*!
+│  Hi, selamat datang di *GuptaAI Bot*!
 │  Bot ini siap bantu kamu 24/7. 
 │
-│  𝗙𝗜𝗧𝗨𝗥 𝗨𝗧𝗔𝗠𝗔
+│  FITUR UTAMA
 │  • !sticker      → Ubah foto/video jadi sticker
 │  • !tstick <teks> → Sticker teks aesthetic
 │  • !play <judul> → Download & kirim musik
 │
-│  𝗖𝗢𝗡𝗧𝗢𝗛 𝗣𝗘𝗡𝗚𝗚𝗨𝗡𝗔𝗔𝗡
+│  CONTOH PENGGUNAAN
 │  • Kirim foto lalu ketik:  *!sticker*
 │  • *!tstick apa ya kak ya*
 │  • *!play sampai jadi debu*
 │
-│  𝗢𝗪𝗡𝗘𝗥 & 𝗦𝗢𝗖𝗜𝗔𝗟
+│  OWNER & SOCIAL
 │  • Instagram: @gedevln12_
 │    ${OWNER_IG}
 │
 │  Gunakan tombol cepat di bawah
 │  untuk akses fitur dengan sekali klik.
-╰────────────────────────────────╯`,
-        footer: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_',
-        buttons,
-        headerType: 1
-      })
+╰────────────────────────────────╯`
+      },
+      footer: {
+        text: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_'
+      },
+      header: {
+        title: 'GuptaAI WhatsApp Bot',
+        hasMediaAttachment: false
+      },
+      nativeFlowMessage: {
+        buttons: [
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🔁 Tes Bot',
+              id: 'test_btn'
+            })
+          },
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🧩 Buat Sticker',
+              id: 'sticker_btn'
+            })
+          },
+          {
+            name: 'quick_reply',
+            buttonParamsJson: JSON.stringify({
+              display_text: '🎵 Play Musik',
+              id: 'play_btn'
+            })
+          },
+          {
+            name: 'cta_url',
+            buttonParamsJson: JSON.stringify({
+              display_text: '👤 Owner / Instagram',
+              url: OWNER_IG,
+              merchant_url: OWNER_IG
+            })
+          }
+        ],
+        messageParamsJson: JSON.stringify({})
+      }
     }
+  })
+}
+
 
     // ===== COMMAND: !sticker (image/video / reply image/video) =====
     if (text === '!sticker') {
