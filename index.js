@@ -15,7 +15,7 @@ const ffmpeg = require('fluent-ffmpeg')
 
 // ===== FFMPEG PATH =====
 ffmpeg.setFfmpegPath(
-  path.normalize('C:/Users/ASUS/Downloads/ffmpeg-8.0.1-essentials_build/ffmpeg-8.0.1-essentials_build/bin/ffmpeg.exe')
+  path.normalize('./ffmpeg-8.0.1-essentials_build/bin/ffmpeg.exe')
 )
 
 // ===== TEMP FOLDER =====
