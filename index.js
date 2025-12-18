@@ -11,7 +11,6 @@ const path = require('path')
 const axios = require('axios')
 const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
-// const { createCanvas, registerFont } = require('canvas')
 
 // ===== FFMPEG PATH =====
 ffmpeg.setFfmpegPath(
@@ -22,9 +21,7 @@ ffmpeg.setFfmpegPath(
 const tempDir = path.join(__dirname, 'temp')
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir)
 
-// (opsional) register font kalau mau pakai font khusus
-// registerFont(path.join(__dirname, 'fonts', 'YourFont.ttf'), { family: 'CustomFont' })
-
+// ================== START BOT ==================
 async function startBot() {
   const { state, saveCreds } = await useMultiFileAuthState('./session')
 
@@ -111,96 +108,7 @@ async function startBot() {
     })
   }
 
-  // ===== FUNGSI HELPER: TEXT TO STICKER (PNG) =====
-const createTextStickerBuffer = (text) => {
-  const canvasSize = 512
-  const canvas = createCanvas(canvasSize, canvasSize)
-  const ctx = canvas.getContext('2d')
-
-  // background putih
-  ctx.fillStyle = '#ffffff'
-  ctx.fillRect(0, 0, canvasSize, canvasSize)
-
-  ctx.fillStyle = '#000000'
-  ctx.textBaseline = 'middle'
-
-  const paddingX = 40
-  const maxWidth = canvasSize - paddingX * 2
-  let fontSize = 120
-
-  const wrapWordsToLines = (words, size) => {
-    ctx.font = `${size}px sans-serif`
-    const lines = []
-    let current = []
-
-    for (const w of words) {
-      const test = [...current, w]
-      const left = test[0]
-      const right = test.slice(1).join(' ')
-      let width
-      if (!right) {
-        width = ctx.measureText(left).width
-      } else {
-        const leftW = ctx.measureText(left).width
-        const rightW = ctx.measureText(right).width
-        width = leftW + rightW + 40 // jarak kira-kira
-      }
-      if (width > maxWidth && current.length) {
-        lines.push(current)
-        current = [w]
-      } else {
-        current = test
-      }
-    }
-    if (current.length) lines.push(current)
-    return lines
-  }
-
-  const wordsAll = text.split(/\s+/).filter(Boolean)
-  let linesWords = []
-
-  while (fontSize > 24) {
-    linesWords = wrapWordsToLines(wordsAll, fontSize)
-    if (linesWords.length <= 2) break
-    fontSize -= 4
-  }
-
-  ctx.font = `${fontSize}px sans-serif`
-
-  if (linesWords.length > 2) {
-    const flat = linesWords.flat()
-    linesWords = [
-      flat.slice(0, Math.ceil(flat.length / 2)),
-      flat.slice(Math.ceil(flat.length / 2))
-    ]
-  }
-
-  const lineHeight = fontSize + 6
-  const totalHeight = linesWords.length * lineHeight
-  const startY = canvasSize / 2 - totalHeight / 2 + lineHeight / 2
-
-  linesWords.forEach((words, i) => {
-    const y = startY + i * lineHeight
-
-    if (words.length === 1) {
-      ctx.textAlign = 'left'
-      ctx.fillText(words[0], paddingX, y)
-    } else {
-      const left = words[0]
-      const right = words.slice(1).join(' ')
-
-      ctx.textAlign = 'left'
-      ctx.fillText(left, paddingX, y)
-
-      ctx.textAlign = 'right'
-      ctx.fillText(right, canvasSize - paddingX, y)
-    }
-  })
-
-  return canvas.toBuffer('image/png')
-}
-
-  // ===== MESSAGE =====
+  // ================== MESSAGE HANDLER ==================
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0]
     if (!msg.message) return
@@ -300,24 +208,30 @@ const createTextStickerBuffer = (text) => {
       return
     }
 
-    // ===== COMMAND: TEXT TO STICKER =====
-  if (text.startsWith('!tstick')) {
-  const content = text.replace('!tstick', '').trim()
-  if (!content) return sock.sendMessage(jid, { text: '❌ Contoh: *!tstick apa ya kak ya*' })
+    // ===== COMMAND: TEXT TO STICKER (via API) =====
+    if (text.startsWith('!tstick')) {
+      const content = text.replace('!tstick', '').trim()
+      if (!content) {
+        return sock.sendMessage(jid, {
+          text: '❌ Contoh: *!tstick apa ya kak ya*'
+        })
+      }
 
-  try {
-    // misal API kamu mengembalikan buffer image
-    const { data } = await axios.get(`https://api-kamu/t2s?text=${encodeURIComponent(content)}`, {
-      responseType: 'arraybuffer'
-    })
-    const buf = Buffer.from(data)
-    await sock.sendMessage(jid, { sticker: buf })
-  } catch (e) {
-    console.error(e)
-    await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks.' })
-  }
-}
+      try {
+        const { data } = await axios.get(
+          `https://be-botwa-production.up.railway.app/t2s?text=${encodeURIComponent(content)}`,
+          { responseType: 'arraybuffer' }
+        )
 
+        const buf = Buffer.from(data)
+        await sock.sendMessage(jid, { sticker: buf })
+      } catch (e) {
+        console.error(e)
+        await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks.' })
+      }
+
+      return
+    }
 
     // ===== PLAY MP3 =====
     if (text.startsWith('!play ')) {
