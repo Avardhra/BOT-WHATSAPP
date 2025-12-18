@@ -12,16 +12,17 @@ const axios = require('axios')
 const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
 
+// ===== FFMPEG PORTABLE (WINDOWS + LINUX) =====
+const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg')
+const ffprobe = require('ffprobe-static')
+
+// fluent-ffmpeg pakai binary dari paket npm (otomatis pilih sesuai OS)
+ffmpeg.setFfmpegPath(ffmpegInstaller.path)
+ffmpeg.setFfprobePath(ffprobe.path)
+
 // ===== CONFIG OWNER =====
 const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
-
-// ===== FFMPEG PATH (PAKAI FOLDER PROJECT) =====
-const ffmpegBinDir = path.join(__dirname, 'ffmpeg-8.0.1-essentials_build', 'bin')
-
-ffmpeg.setFfmpegPath(
-  path.join(ffmpegBinDir, 'ffmpeg.exe')
-)
 
 // ===== TEMP FOLDER =====
 const tempDir = path.join(__dirname, 'temp')
@@ -157,7 +158,7 @@ async function startBot() {
       }
     }
 
-    // ===== MENU DENGAN TOMBOL KLASIK (FIX) =====
+    // ===== MENU DENGAN TOMBOL KLASIK =====
     if (text === '!menu') {
       const menuText =
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
@@ -266,7 +267,7 @@ async function startBot() {
 
       const output = path.join(tempDir, `${Date.now()}.mp3`)
       const ytdlpPath = path.join(__dirname, 'bin', 'yt-dlp.exe')
-      const ffmpegDir = ffmpegBinDir
+      const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg buat yt-dlp
 
       await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
 
