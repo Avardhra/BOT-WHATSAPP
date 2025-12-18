@@ -33,6 +33,9 @@ const ytdlpPath = isWindows
   : path.join(__dirname, 'bin', 'yt-dlp')     // Railway (Linux)
 
 const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg untuk yt-dlp
+// 
+console.log('Platform:', process.platform)
+console.log('YT-DLP PATH:', ytdlpPath)
 
 // ================== START BOT ==================
 async function startBot() {
@@ -90,7 +93,7 @@ async function startBot() {
 
     if (!mediaMsg || !mediaMsg.mediaKey) return null
     if (mediaMsg.seconds && mediaMsg.seconds > 10) {
-      return { error: '❌ Video max 10 detik' }
+      return { error: '<!> Video max 10 detik <!>' }
     }
 
     const stream = await downloadContentFromMessage(mediaMsg, mediaType)
@@ -208,7 +211,7 @@ async function startBot() {
       const mediaData = await getMediaFromMessage(msg)
       if (!mediaData) {
         return sock.sendMessage(jid, {
-          text: '❌ Kirim foto / video (max 10 detik) atau reply ke foto/video lalu ketik *!sticker*.'
+          text: '<!> Kirim foto / video (max 10 detik) atau reply ke foto/video lalu ketik *!sticker*. <!>'
         })
       }
       if (mediaData.error) {
@@ -231,7 +234,7 @@ async function startBot() {
       } catch (e) {
         console.error(e)
         await sock.sendMessage(jid, {
-          text: '❌ Gagal membuat sticker.'
+          text: '<!> Gagal membuat sticker. <!>'
         })
       } finally {
         if (fs.existsSync(input)) fs.unlinkSync(input)
@@ -246,7 +249,7 @@ async function startBot() {
       const content = text.replace('!tstick', '').trim()
       if (!content) {
         return sock.sendMessage(jid, {
-          text: '❌ Contoh: *!tstick apa ya kak ya*'
+          text: '<?> Contoh: *!tstick apa ya kak ya*'
         })
       }
 
@@ -260,7 +263,7 @@ async function startBot() {
         await sock.sendMessage(jid, { sticker: buf })
       } catch (e) {
         console.error(e)
-        await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks. | Hubungi Developer untuk memberi tahu keluhan!' })
+        await sock.sendMessage(jid, { text: '<!> Gagal membuat sticker teks. | Hubungi Developer untuk memberi tahu keluhan! <!>' })
       }
 
       return
@@ -273,7 +276,7 @@ async function startBot() {
 
       const output = path.join(tempDir, `${Date.now()}.mp3`)
 
-      await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
+      await sock.sendMessage(jid, { text: '<?> Mencari & mendownload lagu, tunggu sebentar...' })
 
       const cmd = `"${ytdlpPath}" --ffmpeg-location "${ffmpegDir}" -x --audio-format mp3 -o "${output}" "ytsearch1:${query}"`
 
@@ -281,14 +284,14 @@ async function startBot() {
         if (err) {
           console.error(err)
           return sock.sendMessage(jid, {
-            text: '❌ Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!'
+            text: '<!> Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!. <!>'
           })
         }
 
         if (!fs.existsSync(output)) {
           console.error('File output tidak ditemukan:', output)
           return sock.sendMessage(jid, {
-            text: '❌ File audio tidak ditemukan setelah proses download.'
+            text: '<!> File audio tidak ditemukan setelah proses download. <!>'
           })
         }
 
@@ -297,7 +300,7 @@ async function startBot() {
           console.error('Buffer audio kosong')
           fs.unlinkSync(output)
           return sock.sendMessage(jid, {
-            text: '❌ Gagal membaca file audio.'
+            text: '<!> Gagal membaca file audio. <!>'
           })
         }
 
