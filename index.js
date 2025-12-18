@@ -11,7 +11,7 @@ const path = require('path')
 const axios = require('axios')
 const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
-const { createCanvas, registerFont } = require('canvas')
+// const { createCanvas, registerFont } = require('canvas')
 
 // ===== FFMPEG PATH =====
 ffmpeg.setFfmpegPath(
@@ -301,41 +301,23 @@ const createTextStickerBuffer = (text) => {
     }
 
     // ===== COMMAND: TEXT TO STICKER =====
-    if (text.startsWith('!tstick')) {
-      const content = text.replace('!tstick', '').trim()
-      if (!content) {
-        return sock.sendMessage(jid, {
-          text: '❌ Contoh: *!tstick apa ya kak ya*'
-        })
-      }
+  if (text.startsWith('!tstick')) {
+  const content = text.replace('!tstick', '').trim()
+  if (!content) return sock.sendMessage(jid, { text: '❌ Contoh: *!tstick apa ya kak ya*' })
 
-      try {
-        // 1. buat PNG dari canvas
-        const pngBuffer = createTextStickerBuffer(content)
+  try {
+    // misal API kamu mengembalikan buffer image
+    const { data } = await axios.get(`https://api-kamu/t2s?text=${encodeURIComponent(content)}`, {
+      responseType: 'arraybuffer'
+    })
+    const buf = Buffer.from(data)
+    await sock.sendMessage(jid, { sticker: buf })
+  } catch (e) {
+    console.error(e)
+    await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks.' })
+  }
+}
 
-        // 2. simpan PNG, convert ke webp dengan ffmpeg
-        const inputPng = path.join(tempDir, `${Date.now()}_text.png`)
-        const outputWebp = `${inputPng}.webp`
-        fs.writeFileSync(inputPng, pngBuffer)
-
-        await convertToSticker(inputPng, outputWebp)
-
-        // 3. kirim sebagai sticker webp
-        const stickerBuf = fs.readFileSync(outputWebp)
-        await sock.sendMessage(jid, { sticker: stickerBuf })
-
-        // 4. bersihkan file
-        if (fs.existsSync(inputPng)) fs.unlinkSync(inputPng)
-        if (fs.existsSync(outputWebp)) fs.unlinkSync(outputWebp)
-      } catch (e) {
-        console.error(e)
-        await sock.sendMessage(jid, {
-          text: '❌ Gagal membuat sticker teks.'
-        })
-      }
-
-      return
-    }
 
     // ===== PLAY MP3 =====
     if (text.startsWith('!play ')) {
