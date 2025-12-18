@@ -288,7 +288,7 @@ async function startBot() {
         await sock.sendMessage(jid, { sticker: buf })
       } catch (e) {
         console.error(e)
-        await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks.' })
+        await sock.sendMessage(jid, { text: '❌ Gagal membuat sticker teks. | Hubungi Developer untuk memberi tahu keluhan!' })
       }
 
       return
@@ -302,7 +302,6 @@ async function startBot() {
       const output = path.join(tempDir, `${Date.now()}.mp3`)
       const ytdlpPath = path.join(__dirname, 'bin', 'yt-dlp.exe')
 
-      // pakai folder ffmpeg yang sama
       const ffmpegDir = ffmpegBinDir
 
       await sock.sendMessage(jid, { text: '🎵 Mencari & mendownload lagu, tunggu sebentar...' })
@@ -313,7 +312,7 @@ async function startBot() {
         if (err) {
           console.error(err)
           return sock.sendMessage(jid, {
-            text: '❌ Gagal download lagu'
+            text: '❌ Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!'
           })
         }
 
