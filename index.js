@@ -21,8 +21,8 @@ ffmpeg.setFfprobePath(ffprobe.path)
 // ===== CONFIG OWNER / ADMIN =====
 const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
-// nomor owner (tanpa +)
-const ADMIN_NUMBER = '6289652019925@s.whatsapp.net'
+// isi hanya ANGKA nomormu (tanpa +, tanpa :46)
+const ADMIN_PHONE = '6289652019925'
 
 // ===== TEMP FOLDER =====
 const tempDir = path.join(__dirname, 'temp')
@@ -89,7 +89,6 @@ const badWords = [
   'bajingan',
   'tai',
   'jancuk',
-  'jancuk',
   'pantek',
   'brengsek',
   'setan',
@@ -104,10 +103,7 @@ const badWords = [
   'sialan',
   'bego',
   'gila',
-  'goblok',
-  'idiot',
-  'bajingan',
-  'brengsek'
+  'idiot'
 ]
 
 const normalizeText = (str) =>
@@ -119,6 +115,12 @@ const normalizeText = (str) =>
 const hasBadWord = (text) => {
   const norm = normalizeText(text)
   return badWords.some((w) => norm.includes(w))
+}
+
+// helper: ambil hanya digit dari JID / lid
+const extractDigits = (id) => {
+  if (!id) return ''
+  return String(id).match(/\d+/g)?.join('') || ''
 }
 
 // ================== START BOT ==================
@@ -225,17 +227,28 @@ async function startBot () {
 
     const jid = msg.key.remoteJid
     const isGroup = jid.endsWith('@g.us')
-    const senderJid = isGroup
+
+    // di grup: participant bisa @lid atau @s.whatsapp.net
+    const senderJidRaw = isGroup
       ? (msg.key.participant || msg.participant || '')
       : jid
-    const fromMe = msg.key.fromMe === true
 
+    const fromMe = msg.key.fromMe === true
     const text = getText(msg).trim()
 
-    // owner = nomor ADMIN_NUMBER ATAU pesan dari device bot sendiri (handle @lid) [web:60][web:96]
-    const isAdminMain = senderJid === ADMIN_NUMBER || fromMe
+    // normalisasi owner: bandingkan hanya digit nomor
+    const senderDigits = extractDigits(senderJidRaw)
+    const adminDigits = extractDigits(ADMIN_PHONE)
 
-    console.log('senderJid:', senderJid, 'isGroup:', isGroup, 'fromMe:', fromMe, 'isAdminMain:', isAdminMain)
+    const isAdminMain = senderDigits === adminDigits || fromMe
+
+    console.log(
+      'senderJidRaw:', senderJidRaw,
+      'digits:', senderDigits,
+      'isGroup:', isGroup,
+      'fromMe:', fromMe,
+      'isAdminMain:', isAdminMain
+    )
 
     // ===== ANTI KATA KASAR =====
     if (text && hasBadWord(text)) {
@@ -379,7 +392,7 @@ async function startBot () {
     if (text.startsWith('!kode ')) {
       const inputCode = text.replace('!kode', '').trim().toUpperCase()
 
-      if (!customers[senderJid] || !customers[senderJid].code) {
+      if (!customers[senderJidRaw] || !customers[senderJidRaw].code) {
         return sock.sendMessage(jid, {
           text:
             '❌ Kamu belum terdaftar atau belum dibuatkan kode.\n' +
@@ -387,8 +400,8 @@ async function startBot () {
         })
       }
 
-      if (customers[senderJid].code === inputCode) {
-        customers[senderJid].isVerified = true
+      if (customers[senderJidRaw].code === inputCode) {
+        customers[senderJidRaw].isVerified = true
         saveCustomers()
         return sock.sendMessage(jid, {
           text: '✅ Kode benar. Kamu sekarang sudah terverifikasi dan bisa menggunakan bot.'
@@ -401,7 +414,7 @@ async function startBot () {
     }
 
     const requireVerified = async () => {
-      if (!isVerifiedUser(senderJid)) {
+      if (!isVerifiedUser(senderJidRaw)) {
         await sock.sendMessage(jid, {
           text:
             '🔒 Akses terbatas.\n' +
