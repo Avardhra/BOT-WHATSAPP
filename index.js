@@ -21,8 +21,7 @@ ffmpeg.setFfprobePath(ffprobe.path)
 // ===== CONFIG OWNER / ADMIN =====
 const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
-
-// nomor admin utama (format JID WA, TANPA +)
+// nomor owner (tanpa +)
 const ADMIN_NUMBER = '6289652019925@s.whatsapp.net'
 
 // ===== TEMP FOLDER =====
@@ -48,7 +47,7 @@ const saveCustomers = () => {
   fs.writeFileSync(dataFile, JSON.stringify(customers, null, 2))
 }
 
-// helper: generate kode 4 huruf random (A–Z)
+// generate kode 4 huruf
 const generateCode = () => {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
   let code = ''
@@ -58,7 +57,7 @@ const generateCode = () => {
   return code
 }
 
-// helper: cek apakah JID sudah verifikasi kode
+// cek user sudah verif atau belum
 const isVerifiedUser = (jid) => {
   const user = customers[jid]
   return user && user.isVerified === true
@@ -75,7 +74,7 @@ const ffmpegDir = path.dirname(ffmpegInstaller.path)
 console.log('Platform:', process.platform)
 console.log('YT-DLP PATH:', ytdlpPath)
 
-// ===== KATA KASAR SEDERHANA (CUSTOM) =====
+// ===== LIST KATA KASAR =====
 const badWords = [
   'anjing',
   'babi',
@@ -86,14 +85,12 @@ const badWords = [
   'bangsat'
 ]
 
-// normalisasi teks (lowercase, hapus tanda baca dasar)
 const normalizeText = (str) =>
   str
     .toLowerCase()
     .replace(/[^\p{L}\p{N}\s]/gu, ' ')
     .trim()
 
-// cek ada kata kasar atau tidak
 const hasBadWord = (text) => {
   const norm = normalizeText(text)
   return badWords.some((w) => norm.includes(w))
@@ -123,7 +120,7 @@ async function startBot () {
     }
   })
 
-  // ===== HELPER: CEK BOT ADMIN DI GROUP =====
+  // CEK BOT ADMIN DI GROUP
   const isBotAdminInGroup = async (jid) => {
     try {
       const groupMeta = await sock.groupMetadata(jid)
@@ -136,7 +133,6 @@ async function startBot () {
     }
   }
 
-  // ===== HELPER: AMBIL TEKS PESAN =====
   const getText = (msg) =>
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
@@ -144,7 +140,6 @@ async function startBot () {
     msg.message?.videoMessage?.caption ||
     ''
 
-  // ===== HELPER: AMBIL MEDIA (LANGSUNG / REPLY) =====
   const getMediaFromMessage = async (m) => {
     let mediaMsg = null
     let mediaType = null
@@ -180,7 +175,6 @@ async function startBot () {
     return { buffer, mediaType }
   }
 
-  // ===== KONVERSI MEDIA JADI STICKER =====
   const convertToSticker = (inputPath, outputPath) => {
     return new Promise((resolve, reject) => {
       ffmpeg(inputPath)
@@ -199,7 +193,7 @@ async function startBot () {
     })
   }
 
-  // ================== MESSAGE HANDLER ==================
+  // ============ MESSAGE HANDLER ============
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0]
     if (!msg.message) return
@@ -209,43 +203,41 @@ async function startBot () {
     const senderJid = isGroup
       ? (msg.key.participant || msg.participant || '')
       : jid
+    const fromMe = msg.key.fromMe === true
 
     const text = getText(msg).trim()
 
-    // flag admin utama (developer)
-    const isAdminMain = senderJid === ADMIN_NUMBER
+    // owner = nomor ADMIN_NUMBER ATAU pesan dari device bot sendiri (handle @lid) [web:60][web:96]
+    const isAdminMain = senderJid === ADMIN_NUMBER || fromMe
 
-    // debug log (boleh hapus kalau sudah yakin)
-    console.log('senderJid:', senderJid, 'isGroup:', isGroup, 'isAdminMain:', isAdminMain)
+    console.log('senderJid:', senderJid, 'isGroup:', isGroup, 'fromMe:', fromMe, 'isAdminMain:', isAdminMain)
 
-    // ===== ANTI KATA KASAR (GLOBAL, TANPA HARUS PANGGIL BOT) =====
-    if (text) {
-      if (hasBadWord(text)) {
-        if (isGroup) {
-          const botIsAdmin = await isBotAdminInGroup(jid)
-          if (botIsAdmin) {
-            try {
-              await sock.sendMessage(jid, { delete: msg.key })
-              await sock.sendMessage(jid, {
-                text: '🚫 Pesan dihapus karena mengandung kata tidak pantas.\nMohon gunakan bahasa yang lebih sopan.'
-              })
-            } catch (e) {
-              console.error('Gagal hapus pesan kasar:', e)
-            }
-          } else {
+    // ===== ANTI KATA KASAR =====
+    if (text && hasBadWord(text)) {
+      if (isGroup) {
+        const botIsAdmin = await isBotAdminInGroup(jid)
+        if (botIsAdmin) {
+          try {
+            await sock.sendMessage(jid, { delete: msg.key })
             await sock.sendMessage(jid, {
-              text: '⚠️ Terdeteksi kata tidak pantas, tapi bot bukan admin sehingga tidak bisa menghapus pesan.'
+              text: '🚫 Pesan dihapus karena mengandung kata tidak pantas.\nMohon gunakan bahasa yang lebih sopan.'
             })
+          } catch (e) {
+            console.error('Gagal hapus pesan kasar:', e)
           }
         } else {
           await sock.sendMessage(jid, {
-            text: '🚫 Mohon jangan gunakan kata-kata kasar.'
+            text: '⚠️ Terdeteksi kata tidak pantas, tapi bot bukan admin sehingga tidak bisa menghapus pesan.'
           })
         }
+      } else {
+        await sock.sendMessage(jid, {
+          text: '🚫 Mohon jangan gunakan kata-kata kasar.'
+        })
       }
     }
 
-    // ===== HANDLER REPLY BUTTON =====
+    // ===== BUTTON HANDLER =====
     if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
       const btnId =
         msg.message.templateButtonReplyMessage?.selectedId ||
@@ -281,9 +273,9 @@ async function startBot () {
       }
     }
 
-    // ================== SISTEM KODE RAHASIA ==================
+    // ===== SISTEM KODE RAHASIA =====
 
-    // !addcustomer <nomor_wa>  (hanya admin utama)
+    // hanya owner
     if (text.startsWith('!addcustomer') && isAdminMain) {
       const parts = text.split(' ')
       if (parts.length < 2) {
@@ -315,7 +307,6 @@ async function startBot () {
       }
     }
 
-    // !genkode <nomor_wa>  (hanya admin utama)
     if (text.startsWith('!genkode') && isAdminMain) {
       const parts = text.split(' ')
       if (parts.length < 2) {
@@ -360,7 +351,6 @@ async function startBot () {
       return
     }
 
-    // !kode ABCD  -> user verifikasi
     if (text.startsWith('!kode ')) {
       const inputCode = text.replace('!kode', '').trim().toUpperCase()
 
@@ -385,7 +375,6 @@ async function startBot () {
       }
     }
 
-    // helper: fitur yang butuh verifikasi
     const requireVerified = async () => {
       if (!isVerifiedUser(senderJid)) {
         await sock.sendMessage(jid, {
@@ -399,10 +388,14 @@ async function startBot () {
       return true
     }
 
-    // ================== MENU ADMIN ==================
+    // ===== MENU ADMIN (HANYA OWNER) =====
+    if (text === '!menuadmin') {
+      if (!isAdminMain) {
+        return sock.sendMessage(jid, {
+          text: '❌ Menu admin hanya bisa dipakai oleh developer (owner bot).'
+        })
+      }
 
-    // menu admin khusus owner (private / group)
-    if (text === '!menuadmin' && isAdminMain) {
       const adminMenu =
 `╭──〔 🔧 Admin Menu 〕──╮
 │ • !addcustomer 628xxx
@@ -413,33 +406,7 @@ async function startBot () {
       return sock.sendMessage(jid, { text: adminMenu })
     }
 
-    // menu admin grup (hanya admin grup, bukan owner)
-    if (text === '!menuadmin' && isGroup && !isAdminMain) {
-      try {
-        const meta = await sock.groupMetadata(jid)
-        const sender = meta.participants.find((p) => p.id === senderJid)
-        const isGroupAdmin = sender && sender.admin != null
-
-        if (!isGroupAdmin) {
-          return sock.sendMessage(jid, {
-            text: '❌ Menu ini hanya bisa dipakai admin grup.'
-          })
-        }
-
-        const groupAdminMenu =
-`╭──〔 🔧 Admin Grup 〕──╮
-│ • Pantau kata kasar
-│ • Atur aturan grup
-│ • (tambah perintah admin grup di sini)
-╰──────────────────────╯`
-
-        return sock.sendMessage(jid, { text: groupAdminMenu })
-      } catch (e) {
-        console.error('Gagal ambil metadata grup:', e)
-      }
-    }
-
-    // ================== MENU UTAMA ==================
+    // ===== MENU UTAMA =====
     if (text === '!menu') {
       const menuText =
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
@@ -482,8 +449,9 @@ async function startBot () {
       })
     }
 
-    // ===== COMMAND: !sticker =====
+    // ===== !sticker =====
     if (text === '!sticker') {
+      // kalau mau paksa verif:
       // const ok = await requireVerified()
       // if (!ok) return
 
@@ -523,7 +491,7 @@ async function startBot () {
       return
     }
 
-    // ===== COMMAND: TEXT TO STICKER (via API) =====
+    // ===== !tstick =====
     if (text.startsWith('!tstick')) {
       const content = text.replace('!tstick', '').trim()
       if (!content) {
@@ -550,7 +518,7 @@ async function startBot () {
       return
     }
 
-    // ===== PLAY MP3 =====
+    // ===== !play =====
     if (text.startsWith('!play ')) {
       const query = text.replace('!play ', '').trim()
       if (!query) return
