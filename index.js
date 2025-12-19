@@ -82,7 +82,32 @@ const badWords = [
   'memek',
   'goblok',
   'tolol',
-  'bangsat'
+  'bangsat',
+  'pler',
+  'bujang',
+  'bujanh',
+  'bajingan',
+  'tai',
+  'jancuk',
+  'jancuk',
+  'pantek',
+  'brengsek',
+  'setan',
+  'sundal',
+  'kampang',
+  'desah',
+  'ngentot',
+  'pepek',
+  'bacot',
+  'banci',
+  'celeng',
+  'sialan',
+  'bego',
+  'gila',
+  'goblok',
+  'idiot',
+  'bajingan',
+  'brengsek'
 ]
 
 const normalizeText = (str) =>
