@@ -23,7 +23,7 @@ const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
 
 // nomor admin utama (HARUS dalam format JID WhatsApp)
-const ADMIN_NUMBER = '089652019925@s.whatsapp.net'
+const ADMIN_NUMBER = '+6289652019925@s.whatsapp.net'
 
 // ===== TEMP FOLDER =====
 const tempDir = path.join(__dirname, 'temp')
