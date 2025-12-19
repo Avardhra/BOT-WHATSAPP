@@ -18,24 +18,86 @@ const ffprobe = require('ffprobe-static')
 ffmpeg.setFfmpegPath(ffmpegInstaller.path)
 ffmpeg.setFfprobePath(ffprobe.path)
 
-// ===== CONFIG OWNER =====
+// ===== CONFIG OWNER / ADMIN =====
 const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
+
+// nomor admin utama (HARUS dalam format JID WhatsApp)
+const ADMIN_NUMBER = '089652019925@s.whatsapp.net'
 
 // ===== TEMP FOLDER =====
 const tempDir = path.join(__dirname, 'temp')
 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir)
 
+// ===== SIMPLE STORAGE UNTUK CUSTOMER & KODE =====
+const dataFile = path.join(__dirname, 'customers.json')
+
+let customers = {}
+
+// load data di awal
+if (fs.existsSync(dataFile)) {
+  try {
+    customers = JSON.parse(fs.readFileSync(dataFile, 'utf-8'))
+  } catch {
+    customers = {}
+  }
+}
+
+// simpan ke file
+const saveCustomers = () => {
+  fs.writeFileSync(dataFile, JSON.stringify(customers, null, 2))
+}
+
+// helper: generate kode 4 huruf random (A–Z)
+const generateCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+  let code = ''
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  return code
+}
+
+// helper: cek apakah JID sudah verifikasi kode
+const isVerifiedUser = (jid) => {
+  const user = customers[jid]
+  return user && user.isVerified === true
+}
+
 // ===== DETEKSI OS & PATH YT-DLP =====
 const isWindows = process.platform === 'win32'
 const ytdlpPath = isWindows
-  ? path.join(__dirname, 'bin', 'yt-dlp.exe') // lokal Windows
-  : path.join(__dirname, 'bin', 'yt-dlp')     // Railway (Linux)
+  ? path.join(__dirname, 'bin', 'yt-dlp.exe')
+  : path.join(__dirname, 'bin', 'yt-dlp')
 
-const ffmpegDir = path.dirname(ffmpegInstaller.path) // folder ffmpeg untuk yt-dlp
+const ffmpegDir = path.dirname(ffmpegInstaller.path)
 
 console.log('Platform:', process.platform)
 console.log('YT-DLP PATH:', ytdlpPath)
+
+// ===== KATA KASAR SEDERHANA (CUSTOM) =====
+const badWords = [
+  'anjing',
+  'babi',
+  'kontol',
+  'memek',
+  'goblok',
+  'tolol',
+  'bangsat'
+]
+
+// normalisasi teks (lowercase, hapus tanda baca dasar)
+const normalizeText = (str) =>
+  str
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .trim()
+
+// cek ada kata kasar atau tidak
+const hasBadWord = (text) => {
+  const norm = normalizeText(text)
+  return badWords.some((w) => norm.includes(w))
+}
 
 // ================== START BOT ==================
 async function startBot () {
@@ -61,7 +123,20 @@ async function startBot () {
     }
   })
 
-  // ===== FUNGSI HELPER: AMBIL TEKS PESAN =====
+  // ===== HELPER: CEK BOT ADMIN DI GROUP =====
+  const isBotAdminInGroup = async (jid) => {
+    try {
+      const groupMeta = await sock.groupMetadata(jid) // [web:29][web:24]
+      const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net'
+      const me = groupMeta.participants.find((p) => p.id === botNumber)
+      return !!me && me.admin != null
+    } catch (e) {
+      console.error('Gagal cek groupMetadata:', e)
+      return false
+    }
+  }
+
+  // ===== HELPER: AMBIL TEKS PESAN =====
   const getText = (msg) =>
     msg.message?.conversation ||
     msg.message?.extendedTextMessage?.text ||
@@ -69,7 +144,7 @@ async function startBot () {
     msg.message?.videoMessage?.caption ||
     ''
 
-  // ===== FUNGSI HELPER: AMBIL MEDIA (LANGSUNG / REPLY) =====
+  // ===== HELPER: AMBIL MEDIA (LANGSUNG / REPLY) =====
   const getMediaFromMessage = async (m) => {
     let mediaMsg = null
     let mediaType = null
@@ -93,7 +168,7 @@ async function startBot () {
 
     if (!mediaMsg || !mediaMsg.mediaKey) return null
     if (mediaMsg.seconds && mediaMsg.seconds > 10) {
-      return { error: '<!> Video max 10 detik <!>' }
+      return { error: '⚠️ Video maksimal 10 detik.' }
     }
 
     const stream = await downloadContentFromMessage(mediaMsg, mediaType)
@@ -105,7 +180,7 @@ async function startBot () {
     return { buffer, mediaType }
   }
 
-  // ===== FUNGSI HELPER: KONVERSI MEDIA JADI STICKER =====
+  // ===== KONVERSI MEDIA JADI STICKER =====
   const convertToSticker = (inputPath, outputPath) => {
     return new Promise((resolve, reject) => {
       ffmpeg(inputPath)
@@ -130,7 +205,40 @@ async function startBot () {
     if (!msg.message) return
 
     const jid = msg.key.remoteJid
+    const isGroup = jid.endsWith('@g.us')
+    const senderJid = isGroup ? msg.key.participant || jid : jid
+
     const text = getText(msg).trim()
+
+    // flag admin utama (developer)
+    const isAdminMain = senderJid === ADMIN_NUMBER
+
+    // ===== ANTI KATA KASAR (GLOBAL, TANPA HARUS PANGGIL BOT) =====
+    if (text) {
+      if (hasBadWord(text)) {
+        if (isGroup) {
+          const botIsAdmin = await isBotAdminInGroup(jid)
+          if (botIsAdmin) {
+            try {
+              await sock.sendMessage(jid, { delete: msg.key }) // delete for everyone [web:24]
+              await sock.sendMessage(jid, {
+                text: '🚫 Pesan dihapus karena mengandung kata tidak pantas.\nMohon gunakan bahasa yang lebih sopan.'
+              })
+            } catch (e) {
+              console.error('Gagal hapus pesan kasar:', e)
+            }
+          } else {
+            await sock.sendMessage(jid, {
+              text: '⚠️ Terdeteksi kata tidak pantas, tapi bot bukan admin sehingga tidak bisa menghapus pesan.'
+            })
+          }
+        } else {
+          await sock.sendMessage(jid, {
+            text: '🚫 Mohon jangan gunakan kata-kata kasar.'
+          })
+        }
+      }
+    }
 
     // ===== HANDLER REPLY BUTTON =====
     if (msg.message?.templateButtonReplyMessage || msg.message?.buttonsResponseMessage) {
@@ -161,13 +269,172 @@ async function startBot () {
           text:
             `👤 Owner GuptaAI Bot\n\n` +
             `• Nama : ${OWNER_NAME}\n` +
-            `• Instagram : ${OWNER_IG}\n\n` +
-            `Silakan hubungi via DM Instagram untuk kerja sama, bug report, atau request fitur baru.`
+            `• Instagram : ${OWNER_IG}\n` +
+            `• WhatsApp : wa.me/6289652019925\n\n` +
+            `Silakan hubungi via DM Instagram atau WhatsApp untuk kerja sama, bug report, atau request fitur baru.`
         })
       }
     }
 
-    // ===== MENU DENGAN TOMBOL KLASIK =====
+    // ================== SISTEM KODE RAHASIA ==================
+
+    // !addcustomer <nomor_wa>  (hanya admin utama)
+    if (text.startsWith('!addcustomer') && isAdminMain) {
+      const parts = text.split(' ')
+      if (parts.length < 2) {
+        return sock.sendMessage(jid, {
+          text: 'ℹ️ Format: *!addcustomer 628xxxxxxxxxx*'
+        })
+      }
+      const num = parts[1].replace(/[^0-9]/g, '')
+      if (!num) {
+        return sock.sendMessage(jid, {
+          text: '❌ Nomor tidak valid.'
+        })
+      }
+      const customerJid = num + '@s.whatsapp.net'
+
+      if (!customers[customerJid]) {
+        customers[customerJid] = {
+          isVerified: false,
+          code: null
+        }
+        saveCustomers()
+        return sock.sendMessage(jid, {
+          text: `✅ Customer baru ditambahkan:\n• ${customerJid}`
+        })
+      } else {
+        return sock.sendMessage(jid, {
+          text: `ℹ️ Customer sudah terdaftar:\n• ${customerJid}`
+        })
+      }
+    }
+
+    // !genkode <nomor_wa>  (hanya admin utama)
+    if (text.startsWith('!genkode') && isAdminMain) {
+      const parts = text.split(' ')
+      if (parts.length < 2) {
+        return sock.sendMessage(jid, {
+          text: 'ℹ️ Format: *!genkode 628xxxxxxxxxx*'
+        })
+      }
+      const num = parts[1].replace(/[^0-9]/g, '')
+      if (!num) {
+        return sock.sendMessage(jid, {
+          text: '❌ Nomor tidak valid.'
+        })
+      }
+      const customerJid = num + '@s.whatsapp.net'
+
+      if (!customers[customerJid]) {
+        customers[customerJid] = {
+          isVerified: false,
+          code: null
+        }
+      }
+
+      const newCode = generateCode()
+      customers[customerJid].code = newCode
+      customers[customerJid].isVerified = false
+      saveCustomers()
+
+      await sock.sendMessage(jid, {
+        text:
+          `🔐 Kode rahasia untuk customer:\n` +
+          `• JID : ${customerJid}\n` +
+          `• Kode: *${newCode}*`
+      })
+
+      await sock.sendMessage(customerJid, {
+        text:
+          `🔐 Halo, ini kode rahasiamu dari *GuptaAI Bot*:\n` +
+          `Kode: *${newCode}*\n\n` +
+          `Silakan kirim ke bot dengan format: *!kode ${newCode}*`
+      })
+
+      return
+    }
+
+    // !kode ABCD  -> user verifikasi
+    if (text.startsWith('!kode ')) {
+      const inputCode = text.replace('!kode', '').trim().toUpperCase()
+
+      if (!customers[senderJid] || !customers[senderJid].code) {
+        return sock.sendMessage(jid, {
+          text:
+            '❌ Kamu belum terdaftar atau belum dibuatkan kode.\n' +
+            'Silakan hubungi developer di wa.me/6289652019925 untuk meminta kode 4 huruf.'
+        })
+      }
+
+      if (customers[senderJid].code === inputCode) {
+        customers[senderJid].isVerified = true
+        saveCustomers()
+        return sock.sendMessage(jid, {
+          text: '✅ Kode benar. Kamu sekarang sudah terverifikasi dan bisa menggunakan bot.'
+        })
+      } else {
+        return sock.sendMessage(jid, {
+          text: '❌ Kode salah. Silakan cek lagi atau hubungi developer di wa.me/6289652019925.'
+        })
+      }
+    }
+
+    // helper: fitur yang butuh verifikasi
+    const requireVerified = async () => {
+      if (!isVerifiedUser(senderJid)) {
+        await sock.sendMessage(jid, {
+          text:
+            '🔒 Akses terbatas.\n' +
+            'Kamu belum memasukkan kode rahasia 4 huruf.\n\n' +
+            'Silakan hubungi developer di wa.me/6289652019925 untuk meminta kode, lalu kirim ke bot dengan format: *!kode ABCD*.'
+        })
+        return false
+      }
+      return true
+    }
+
+    // ================== MENU ADMIN ==================
+
+    // menu admin khusus owner (private / group)
+    if (text === '!menuadmin' && isAdminMain) {
+      const adminMenu =
+`╭──〔 🔧 Admin Menu 〕──╮
+│ • !addcustomer 628xxx
+│ • !genkode 628xxx
+│ • (tambah perintah admin lain di sini)
+╰────────────────────╯`
+
+      return sock.sendMessage(jid, { text: adminMenu })
+    }
+
+    // menu admin grup (hanya admin grup)
+    if (text === '!menuadmin' && isGroup && !isAdminMain) {
+      try {
+        const meta = await sock.groupMetadata(jid) // [web:29][web:52]
+        const sender = meta.participants.find((p) => p.id === senderJid)
+        const isGroupAdmin = sender && sender.admin != null
+
+        if (!isGroupAdmin) {
+          return sock.sendMessage(jid, {
+            text: '❌ Menu ini hanya bisa dipakai admin grup.'
+          })
+        }
+
+        const groupAdminMenu =
+`╭──〔 🔧 Admin Grup 〕──╮
+│ • Pantau kata kasar
+│ • Atur aturan grup
+│ • (tambah perintah admin grup di sini)
+╰──────────────────────╯`
+
+        return sock.sendMessage(jid, { text: groupAdminMenu })
+      } catch (e) {
+        console.error('Gagal ambil metadata grup:', e)
+      }
+    }
+
+    // ================== MENU UTAMA ==================
     if (text === '!menu') {
       const menuText =
 `╭───〔 🤖 GuptaAI WhatsApp Bot 〕───╮
@@ -176,13 +443,17 @@ async function startBot () {
 │  Bot ini siap bantu kamu 24/7. 
 │
 │  FITUR UTAMA
-│  • !sticker       → Ubah foto/video jadi sticker
-│  • !tstick <teks> → Sticker teks aesthetic
-│  • !play <judul>  → Download & kirim musik
+│  • !sticker        → Ubah foto/video jadi sticker
+│  • !tstick <teks>  → Sticker teks aesthetic
+│  • !play <judul>   → Download & kirim musik
+│
+│  SISTEM KODE RAHASIA
+│  • Minta kode ke developer: wa.me/6289652019925
+│  • Verifikasi: *!kode ABCD* (contoh)
 │
 │  CONTOH PENGGUNAAN
 │  • Kirim foto lalu ketik:  *!sticker*
-│  • *tstick apa ya kak ya*
+│  • *!tstick apa ya kak ya*
 │  • *!play sampai jadi debu*
 │
 │  OWNER & SOCIAL
@@ -195,7 +466,7 @@ async function startBot () {
 
       return sock.sendMessage(jid, {
         text: menuText,
-        footer: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_',
+        footer: 'GuptaAI • Smart WhatsApp Assistant • Instagram: @gedevln12_ • wa.me/6289652019925',
         buttons: [
           { buttonId: 'test_btn', buttonText: { displayText: '🔁 Tes Bot' }, type: 1 },
           { buttonId: 'sticker_btn', buttonText: { displayText: '🧩 Buat Sticker' }, type: 1 },
@@ -208,10 +479,14 @@ async function startBot () {
 
     // ===== COMMAND: !sticker =====
     if (text === '!sticker') {
+      // kalau mau wajib verifikasi, buka komentar 2 baris di bawah:
+      // const ok = await requireVerified()
+      // if (!ok) return
+
       const mediaData = await getMediaFromMessage(msg)
       if (!mediaData) {
         return sock.sendMessage(jid, {
-          text: '<!> Kirim foto / video (max 10 detik) atau reply ke foto/video lalu ketik *!sticker*. <!>'
+          text: '🖼 Kirim foto / video (max 10 detik) atau reply ke foto/video lalu ketik *!sticker*.'
         })
       }
       if (mediaData.error) {
@@ -234,7 +509,7 @@ async function startBot () {
       } catch (e) {
         console.error(e)
         await sock.sendMessage(jid, {
-          text: '<!> Gagal membuat sticker. <!>'
+          text: '❌ Gagal membuat sticker.'
         })
       } finally {
         if (fs.existsSync(input)) fs.unlinkSync(input)
@@ -249,7 +524,7 @@ async function startBot () {
       const content = text.replace('!tstick', '').trim()
       if (!content) {
         return sock.sendMessage(jid, {
-          text: '<?> Contoh: *!tstick apa ya kak ya*'
+          text: 'ℹ️ Contoh: *!tstick apa ya kak ya*'
         })
       }
 
@@ -263,7 +538,9 @@ async function startBot () {
         await sock.sendMessage(jid, { sticker: buf })
       } catch (e) {
         console.error(e)
-        await sock.sendMessage(jid, { text: '<!> Gagal membuat sticker teks. | Hubungi Developer untuk memberi tahu keluhan! <!>' })
+        await sock.sendMessage(jid, {
+          text: '❌ Gagal membuat sticker teks. Silakan hubungi Developer jika masalah berlanjut.'
+        })
       }
 
       return
@@ -276,23 +553,24 @@ async function startBot () {
 
       const output = path.join(tempDir, `${Date.now()}.mp3`)
 
-      await sock.sendMessage(jid, { text: '<?> Mencari & mendownload lagu, tunggu sebentar...' })
+      await sock.sendMessage(jid, {
+        text: '⏳ Mencari & mendownload lagu, tunggu sebentar...'
+      })
 
-      // tambahkan -f bestaudio untuk mengurangi masalah format SABR
       const cmd = `"${ytdlpPath}" --ffmpeg-location "${ffmpegDir}" -f bestaudio -x --audio-format mp3 -o "${output}" "ytsearch1:${query}"`
 
       exec(cmd, async (err) => {
         if (err) {
           console.error(err)
           return sock.sendMessage(jid, {
-            text: '<!> Gagal download lagu. | Hubungi Developer untuk memberi tahu keluhan!. <!>'
+            text: '❌ Gagal download lagu. Silakan coba lagi atau hubungi Developer.'
           })
         }
 
         if (!fs.existsSync(output)) {
           console.error('File output tidak ditemukan:', output)
           return sock.sendMessage(jid, {
-            text: '<!> File audio tidak ditemukan setelah proses download. <!>'
+            text: '❌ File audio tidak ditemukan setelah proses download.'
           })
         }
 
@@ -301,7 +579,7 @@ async function startBot () {
           console.error('Buffer audio kosong')
           fs.unlinkSync(output)
           return sock.sendMessage(jid, {
-            text: '<!> Gagal membaca file audio. <!>'
+            text: '❌ Gagal membaca file audio.'
           })
         }
 
