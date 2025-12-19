@@ -22,8 +22,8 @@ ffmpeg.setFfprobePath(ffprobe.path)
 const OWNER_NAME = 'GuptaAI Dev'
 const OWNER_IG = 'https://www.instagram.com/gedevln12_'
 
-// nomor admin utama (HARUS dalam format JID WhatsApp)
-const ADMIN_NUMBER = '+6289652019925@s.whatsapp.net'
+// nomor admin utama (format JID WA, TANPA +)
+const ADMIN_NUMBER = '6289652019925@s.whatsapp.net'
 
 // ===== TEMP FOLDER =====
 const tempDir = path.join(__dirname, 'temp')
@@ -126,7 +126,7 @@ async function startBot () {
   // ===== HELPER: CEK BOT ADMIN DI GROUP =====
   const isBotAdminInGroup = async (jid) => {
     try {
-      const groupMeta = await sock.groupMetadata(jid) // [web:29][web:24]
+      const groupMeta = await sock.groupMetadata(jid)
       const botNumber = sock.user.id.split(':')[0] + '@s.whatsapp.net'
       const me = groupMeta.participants.find((p) => p.id === botNumber)
       return !!me && me.admin != null
@@ -206,12 +206,17 @@ async function startBot () {
 
     const jid = msg.key.remoteJid
     const isGroup = jid.endsWith('@g.us')
-    const senderJid = isGroup ? msg.key.participant || jid : jid
+    const senderJid = isGroup
+      ? (msg.key.participant || msg.participant || '')
+      : jid
 
     const text = getText(msg).trim()
 
     // flag admin utama (developer)
     const isAdminMain = senderJid === ADMIN_NUMBER
+
+    // debug log (boleh hapus kalau sudah yakin)
+    console.log('senderJid:', senderJid, 'isGroup:', isGroup, 'isAdminMain:', isAdminMain)
 
     // ===== ANTI KATA KASAR (GLOBAL, TANPA HARUS PANGGIL BOT) =====
     if (text) {
@@ -220,7 +225,7 @@ async function startBot () {
           const botIsAdmin = await isBotAdminInGroup(jid)
           if (botIsAdmin) {
             try {
-              await sock.sendMessage(jid, { delete: msg.key }) // delete for everyone [web:24]
+              await sock.sendMessage(jid, { delete: msg.key })
               await sock.sendMessage(jid, {
                 text: '🚫 Pesan dihapus karena mengandung kata tidak pantas.\nMohon gunakan bahasa yang lebih sopan.'
               })
@@ -408,10 +413,10 @@ async function startBot () {
       return sock.sendMessage(jid, { text: adminMenu })
     }
 
-    // menu admin grup (hanya admin grup)
+    // menu admin grup (hanya admin grup, bukan owner)
     if (text === '!menuadmin' && isGroup && !isAdminMain) {
       try {
-        const meta = await sock.groupMetadata(jid) // [web:29][web:52]
+        const meta = await sock.groupMetadata(jid)
         const sender = meta.participants.find((p) => p.id === senderJid)
         const isGroupAdmin = sender && sender.admin != null
 
@@ -479,7 +484,6 @@ async function startBot () {
 
     // ===== COMMAND: !sticker =====
     if (text === '!sticker') {
-      // kalau mau wajib verifikasi, buka komentar 2 baris di bawah:
       // const ok = await requireVerified()
       // if (!ok) return
 
