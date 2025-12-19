@@ -13,6 +13,7 @@ const { exec } = require('child_process')
 const ffmpeg = require('fluent-ffmpeg')
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg')
 const ffprobe = require('ffprobe-static')
+const cron = require('node-cron') // <== TAMBAHAN
 
 // ===== FFMPEG PORTABLE (WINDOWS + LINUX) =====
 ffmpeg.setFfmpegPath(ffmpegInstaller.path)
@@ -96,7 +97,53 @@ async function startBot () {
   sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
     if (qr) qrcode.generate(qr, { small: true })
 
-    if (connection === 'open') console.log('🤖 GuptaAI Bot tersambung, siap ngegas!')
+    if (connection === 'open') {
+      console.log('🤖 GuptaAI Bot tersambung, siap ngegas!')
+
+      // ========== SCHEDULE UCAPAN ==========
+
+      // ganti ke jid tujuan:
+      // - private: '62xxxxxxxxxx@s.whatsapp.net'
+      // - grup   : '123456789-123456@g.us'
+      const targetJid = '62xxxxxxxxxx@s.whatsapp.net'
+
+      // 06:00 pagi
+      cron.schedule('0 6 * * *', async () => {
+        try {
+          await sock.sendMessage(targetJid, {
+            text: 'Selamat pagi semuanya 🌅'
+          })
+          console.log('✅ Ucapan pagi terkirim')
+        } catch (err) {
+          console.error('Gagal kirim ucapan pagi:', err)
+        }
+      })
+
+      // 12:00 siang
+      cron.schedule('0 12 * * *', async () => {
+        try {
+          await sock.sendMessage(targetJid, {
+            text: 'Selamat siang ☀️'
+          })
+          console.log('✅ Ucapan siang terkirim')
+        } catch (err) {
+          console.error('Gagal kirim ucapan siang:', err)
+        }
+      })
+
+      // 19:00 malam
+      cron.schedule('0 19 * * *', async () => {
+        try {
+          await sock.sendMessage(targetJid, {
+            text: 'Selamat malam semuanya 🌆'
+          })
+          console.log('✅ Ucapan malam terkirim')
+        } catch (err) {
+          console.error('Gagal kirim ucapan malam:', err)
+        }
+      })
+      // ========== END SCHEDULE UCAPAN ==========
+    }
 
     if (connection === 'close') {
       const reason = lastDisconnect?.error?.output?.statusCode
